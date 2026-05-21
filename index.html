@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenCanary</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍯</text></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;background:#0d1117;color:#e6edf3;padding:1.5rem;font-size:14px;min-height:100vh}
+a{color:inherit;text-decoration:none}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px}
+.header-left{display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:16px;font-weight:normal}
+.sub{font-size:11px;color:#7d8590;margin-top:2px}
+.header-actions{display:flex;gap:8px;align-items:center}
+.btn{font-size:11px;padding:5px 12px;border-radius:5px;border:1px solid #30363d;background:#161b22;color:#7d8590;cursor:pointer;font-family:monospace}
+.btn:hover{border-color:#58a6ff;color:#58a6ff}
+.btn-export{border-color:#238636;color:#3fb950}
+.btn-export:hover{background:#1a3a1f}
+
+.metrics{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:1.5rem}
+.metric{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 14px}
+.metric-label{font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.metric-value{font-size:22px;font-weight:normal;transition:all .3s}
+.c-ssh{color:#f85149}.c-http{color:#58a6ff}.c-rdp{color:#d29922}.c-ftp{color:#3fb950}
+.c-telnet{color:#e879f9}.c-mysql{color:#fb923c}.c-redis{color:#f43f5e}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
+.panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px}
+.panel-title{font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+
+.top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px}
+.top-ip{color:#58a6ff;cursor:pointer}
+.top-ip:hover{text-decoration:underline}
+.top-count{color:#7d8590}
+.top-bar{height:3px;background:#21262d;border-radius:2px;margin-bottom:8px;overflow:hidden}
+.top-bar-fill{height:100%;background:#58a6ff;border-radius:2px;transition:width .6s}
+.top-cred-key{color:#f85149;font-size:11px}
+
+.hourly{display:flex;align-items:flex-end;gap:3px;height:48px;margin-top:4px}
+.h-bar{flex:1;background:#21262d;border-radius:2px 2px 0 0;min-height:2px;transition:height .4s;position:relative}
+.h-bar.active{background:#58a6ff}
+.h-bar:hover .h-tip{display:block}
+.h-tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#30363d;color:#e6edf3;font-size:10px;padding:2px 5px;border-radius:3px;white-space:nowrap;margin-bottom:3px;pointer-events:none}
+.h-labels{display:flex;justify-content:space-between;margin-top:4px}
+.h-label{font-size:9px;color:#7d8590}
+
+.filters{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.filter-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid #30363d;background:transparent;color:#7d8590;cursor:pointer;font-family:monospace}
+.filter-btn.active{border-color:#58a6ff;color:#58a6ff;background:#1a2a3d}
+.filter-btn.f-SSH.active{border-color:#f85149;color:#f85149;background:#3d1a1a}
+.filter-btn.f-HTTP.active{border-color:#58a6ff;color:#58a6ff;background:#1a2a3d}
+.filter-btn.f-RDP.active{border-color:#d29922;color:#d29922;background:#3d2e0a}
+.filter-btn.f-FTP.active{border-color:#3fb950;color:#3fb950;background:#0f2d16}
+.filter-btn.f-Telnet.active{border-color:#e879f9;color:#e879f9;background:#2d1a3d}
+.filter-btn.f-MySQL.active{border-color:#fb923c;color:#fb923c;background:#3d2010}
+.filter-btn.f-Redis.active{border-color:#f43f5e;color:#f43f5e;background:#3d101a}
+
+.event-list{display:flex;flex-direction:column;gap:5px;max-height:500px;overflow-y:auto}
+.event-list::-webkit-scrollbar{width:4px}
+.event-list::-webkit-scrollbar-track{background:#0d1117}
+.event-list::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px}
+.event{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:start;padding:9px 11px;border:1px solid #21262d;border-radius:6px;background:#0d1117;transition:border-color .15s}
+.event:hover{border-color:#30363d;background:#161b22}
+.event.new{animation:flash .6s}
+@keyframes flash{0%{border-color:#58a6ff;background:#1a2a3d}100%{border-color:#21262d;background:#0d1117}}
+.svc{font-size:10px;font-weight:bold;padding:3px 6px;border-radius:4px;text-align:center;letter-spacing:.04em}
+.svc-SSH{background:#3d1a1a;color:#f85149}
+.svc-HTTP{background:#1a2a3d;color:#58a6ff}
+.svc-RDP{background:#3d2e0a;color:#d29922}
+.svc-FTP{background:#0f2d16;color:#3fb950}
+.svc-Telnet{background:#2d1a3d;color:#e879f9}
+.svc-MySQL{background:#3d2010;color:#fb923c}
+.svc-Redis{background:#3d101a;color:#f43f5e}
+.event-label{font-size:12px;color:#c9d1d9}
+.event-detail{font-size:11px;color:#f85149;margin-top:2px;font-family:monospace;word-break:break-all}
+.event-src{font-size:11px;color:#7d8590;margin-top:2px}
+.event-src a{color:#58a6ff}
+.event-src a:hover{text-decoration:underline}
+.event-time{font-size:10px;color:#7d8590;white-space:nowrap;text-align:right}
+.event-ago{font-size:10px;color:#444c56;margin-top:2px;text-align:right}
+.section-title{font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.empty{color:#444c56;font-size:12px;padding:.75rem 0}
+.badge-new{font-size:9px;padding:1px 5px;background:#1a2a3d;color:#58a6ff;border-radius:3px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="dot" id="dot"></div>
+    <div>
+      <h1>OpenCanary — CRVS-SRV-099 🍯</h1>
+      <div class="sub">192.168.1.157 · DietPi · RPi 4 · <span id="last-update">chargement...</span></div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn" onclick="loadData()">↻ Refresh</button>
+    <a href="/api/export" class="btn btn-export">↓ CSV</a>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="metric-label">SSH</div><div class="metric-value c-ssh" id="s-SSH">{{ stats.SSH }}</div></div>
+  <div class="metric"><div class="metric-label">HTTP</div><div class="metric-value c-http" id="s-HTTP">{{ stats.HTTP }}</div></div>
+  <div class="metric"><div class="metric-label">RDP</div><div class="metric-value c-rdp" id="s-RDP">{{ stats.RDP }}</div></div>
+  <div class="metric"><div class="metric-label">FTP</div><div class="metric-value c-ftp" id="s-FTP">{{ stats.FTP }}</div></div>
+  <div class="metric"><div class="metric-label">Telnet</div><div class="metric-value c-telnet" id="s-Telnet">{{ stats.Telnet }}</div></div>
+  <div class="metric"><div class="metric-label">MySQL</div><div class="metric-value c-mysql" id="s-MySQL">{{ stats.MySQL }}</div></div>
+  <div class="metric"><div class="metric-label">Redis</div><div class="metric-value c-redis" id="s-Redis">{{ stats.Redis }}</div></div>
+</div>
+
+<div class="grid2">
+  <div class="panel">
+    <div class="panel-title">Activité par heure</div>
+    <div class="hourly" id="hourly-bars">
+      {% set max_h = [hourly|map(attribute='v')|max, 1]|max %}
+      {% for h in hourly %}
+      <div class="h-bar {% if h.v > 0 %}active{% endif %}" style="height:{{ (h.v/max_h*100)|int }}%">
+        <span class="h-tip">{{ h.h }}h · {{ h.v }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="h-labels">
+      <span class="h-label">00h</span>
+      <span class="h-label">06h</span>
+      <span class="h-label">12h</span>
+      <span class="h-label">18h</span>
+      <span class="h-label">23h</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Top IPs</div>
+    {% if top_ips %}
+      {% set max_ip = top_ips[0][1] %}
+      {% for ip, count in top_ips %}
+      <div class="top-row">
+        <a class="top-ip" href="https://www.virustotal.com/gui/ip-address/{{ ip }}" target="_blank">{{ ip }}</a>
+        <span class="top-count">{{ count }}</span>
+      </div>
+      <div class="top-bar"><div class="top-bar-fill" style="width:{{ (count/max_ip*100)|int }}%"></div></div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">Aucune IP pour l'instant</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:1.5rem">
+  <div class="panel-title">🏆 Credentials hall of shame</div>
+  {% if top_creds %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+    {% for cred, count in top_creds %}
+    <div style="padding:8px 10px;border:1px solid #21262d;border-radius:6px;display:flex;justify-content:space-between;align-items:center">
+      <span class="top-cred-key">{{ cred }}</span>
+      <span style="font-size:11px;color:#444c56">×{{ count }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="empty">Aucune tentative de credentials pour l'instant</div>
+  {% endif %}
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+  <div class="section-title" style="margin:0">Événements récents <span class="badge-new" id="new-badge" style="display:none">new</span></div>
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('ALL', this)">Tous</button>
+    <button class="filter-btn f-SSH" onclick="setFilter('SSH', this)">SSH</button>
+    <button class="filter-btn f-HTTP" onclick="setFilter('HTTP', this)">HTTP</button>
+    <button class="filter-btn f-RDP" onclick="setFilter('RDP', this)">RDP</button>
+    <button class="filter-btn f-FTP" onclick="setFilter('FTP', this)">FTP</button>
+    <button class="filter-btn f-Telnet" onclick="setFilter('Telnet', this)">Telnet</button>
+    <button class="filter-btn f-MySQL" onclick="setFilter('MySQL', this)">MySQL</button>
+    <button class="filter-btn f-Redis" onclick="setFilter('Redis', this)">Redis</button>
+  </div>
+</div>
+
+<div class="event-list" id="event-list">
+  {% if events %}
+    {% for e in events %}
+    <div class="event" data-svc="{{ e.service }}">
+      <span class="svc svc-{{ e.service }}">{{ e.service }}</span>
+      <div>
+        <div class="event-label">{{ e.label }} → :{{ e.dst_port }}</div>
+        {% if e.detail %}<div class="event-detail">{{ e.detail }}</div>{% endif %}
+        <div class="event-src">
+          {% if e.src %}<a href="https://www.virustotal.com/gui/ip-address/{{ e.src }}" target="_blank">{{ e.src }}</a>{% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="event-time">{{ e.time[11:] }}</div>
+        <div class="event-ago">{{ e.ago }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">Aucun événement pour l'instant 🕯️</div>
+  {% endif %}
+</div>
+
+<script>
+let currentFilter = 'ALL';
+let lastCount = {{ events|length }};
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.event').forEach(ev => {
+    ev.style.display = (f === 'ALL' || ev.dataset.svc === f) ? '' : 'none';
+  });
+}
+
+function renderEvent(e, isNew) {
+  const vtUrl = e.src ? `https://www.virustotal.com/gui/ip-address/${e.src}` : '#';
+  const srcHtml = e.src ? `<a href="${vtUrl}" target="_blank">${e.src}</a>` : '';
+  const detailHtml = e.detail ? `<div class="event-detail">${e.detail}</div>` : '';
+  const div = document.createElement('div');
+  div.className = 'event' + (isNew ? ' new' : '');
+  div.dataset.svc = e.service;
+  div.style.display = (currentFilter === 'ALL' || currentFilter === e.service) ? '' : 'none';
+  div.innerHTML = `
+    <span class="svc svc-${e.service}">${e.service}</span>
+    <div>
+      <div class="event-label">${e.label} → :${e.dst_port}</div>
+      ${detailHtml}
+      <div class="event-src">${srcHtml}</div>
+    </div>
+    <div>
+      <div class="event-time">${e.time.slice(11)}</div>
+      <div class="event-ago">${e.ago}</div>
+    </div>`;
+  return div;
+}
+
+function loadData() {
+  fetch('/api/events')
+    .then(r => r.json())
+    .then(data => {
+      ['SSH','HTTP','RDP','FTP','Telnet','MySQL','Redis'].forEach(s => {
+        const el = document.getElementById('s-' + s);
+        if (el) el.textContent = data.stats[s] || 0;
+      });
+      const list = document.getElementById('event-list');
+      const newCount = data.events.length;
+      const badge = document.getElementById('new-badge');
+      if (newCount > lastCount) {
+        const diff = newCount - lastCount;
+        badge.style.display = 'inline';
+        badge.textContent = `+${diff} new`;
+        setTimeout(() => badge.style.display = 'none', 5000);
+        data.events.slice(0, diff).forEach(e => {
+          list.insertBefore(renderEvent(e, true), list.firstChild);
+        });
+        lastCount = newCount;
+      }
+      const now = new Date();
+      document.getElementById('last-update').textContent =
+        `refresh: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+      document.getElementById('dot').style.background = '#22c55e';
+    })
+    .catch(() => { document.getElementById('dot').style.background = '#f85149'; });
+}
+
+loadData();
+setInterval(loadData, 10000);
+</script>
+</body>
+</html>
